@@ -1,40 +1,65 @@
-# **Panduan Demo Lanjutan: Automasi Pipeline Data (GCS ke BigQuery)**
+# **Automasi Pipeline Data (GCS ke BigQuery)**
 
 ## **Langkah 1: Persiapan BigQuery**
 
 Kita butuh dataset dan tabel kosong (atau biarkan Cloud Function yang membuat tabel, tapi lebih aman buat dataset dulu).
 
 1. **Buat Dataset**  
-   bq \--location=asia-southeast2 mk \-d demo\_dataset
+   ```
+   bq --location=asia-southeast2 mk -d demo_dataset
+   ```
 
 ## **Langkah 2: Deploy Cloud Function**
 
 Fungsi ini akan "mendengarkan" (listen) setiap kali ada file baru masuk ke bucket yang kita buat sebelumnya.
 
 1. Pastikan Anda berada di luar folder function\_source (sejajar).  
-2. Jalankan perintah deploy:  
-   *(Ganti \[NAMA\_BUCKET\_ANDA\] dengan nama bucket dari demo sebelumnya)*  
-   gcloud functions deploy gcs-to-bigquery-loader \\  
-       \--source ./function\_source \\  
-       \--runtime python39 \\  
-       \--trigger-resource \[NAMA\_BUCKET\_ANDA\] \\  
-       \--trigger-event google.storage.object.finalize \\  
-       \--region asia-southeast2 \\  
-       \--set-env-vars DATASET\_ID=demo\_dataset,TABLE\_ID=sales\_data \\  
-       \--entry-point load\_gcs\_to\_bigquery
+2. Jalankan perintah deploy:    
+   ```
+   gcloud functions deploy gcs-to-bigquery-loader2 \
+    --source ./function_source \
+    --runtime python311 \
+    --no-gen2 \
+    --trigger-resource $BUCKET_NAME \
+    --trigger-event google.storage.object.finalize \
+    --region asia-southeast2 \
+    --set-env-vars DATASET_ID=demo_dataset,TABLE_ID=sales_data \
+    --entry-point load_gcs_to_bigquery
+   ```
 
-   **Penjelasan untuk Engineer & Analyst:**  
-   * \--trigger-event google.storage.object.finalize: Ini adalah "Event". Artinya, jalankan kode TEPAT saat upload file selesai.
 
 ## **Langkah 3: Setup IAM (Penting\!)**
 
-Cloud Function butuh izin untuk menulis ke BigQuery.
+Cloud Function (Gen 1) berjalan menggunakan App Engine Default Service Account. Akun ini butuh izin untuk menulis data (Data Editor), menjalankan proses upload (Job User), dan membaca file dari bucket (Storage Viewer).
 
-1. Dapatkan email service account Cloud Function (biasanya App Engine default service account):  
-   gcloud projects describe $GOOGLE\_CLOUD\_PROJECT \--format="value(projectNumber)"
+1. Set Variable Service Account
+Secara default, Cloud Functions Gen 1 menggunakan App Engine default service account.
 
-   Emailnya: \[PROJECT\_NUMBER\]@cloudbuild.gserviceaccount.com atau \[PROJECT\_ID\]@appspot.gserviceaccount.com. Cek di UI Cloud Functions \> Details untuk pastinya.  
-2. Berikan role BigQuery Data Editor dan BigQuery Job User.
+```
+export PROJECT_ID=$(gcloud config get-value project)
+export SERVICE_ACCOUNT="${PROJECT_ID}@appspot.gserviceaccount.com"
+```
+
+2. Berikan Role BigQuery & Storage (Eksekusi 3 Perintah Ini)
+Tanpa roles/bigquery.jobUser, error jobs.create. Tanpa roles/storage.objectViewer, error Access Denied: File gs://....
+
+```
+# 1. Izin untuk mengedit data BigQuery (Insert rows/Create Tables)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/bigquery.dataEditor"
+
+# 2. Izin untuk menjalankan Job BigQuery (Load Job)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/bigquery.jobUser"
+
+# 3. Izin untuk membaca file dari GCS (WAJIB ADA)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/storage.objectViewer"
+```
+
 
 ## **Langkah 4: Demo Time\!**
 
