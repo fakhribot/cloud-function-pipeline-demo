@@ -72,7 +72,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
    3,Monitor,3000000,Surabaya
 ```
 
-2. Buka Web App (Demo 1\) dan Upload file CSV tersebut.  
-3. Buka **Cloud Console \> BigQuery**.  
-4. Cek dataset demo\_dataset, buka tabel sales\_data.  
-5. Klik **Preview**. Data sudah masuk\!
+2. Buka Web App dan Upload file CSV tersebut.  
+3. Buka **Cloud Console > BigQuery**.  
+4. Cek dataset demo_dataset, buka tabel sales\_data.  
+5. Klik **Preview**. Data sudah masuk!
