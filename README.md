@@ -54,7 +54,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:${SERVICE_ACCOUNT}" \
     --role="roles/bigquery.jobUser"
 
-# 3. Izin untuk membaca file dari GCS (WAJIB ADA)
+# 3. Izin untuk membaca file dari GCS
 gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:${SERVICE_ACCOUNT}" \
     --role="roles/storage.objectViewer"
